@@ -31,7 +31,6 @@ export const Player: React.FC<PlayerProps> = ({ keyboardState, touchState }) => 
   const {
     velocity,
     isGrounded,
-    onGroundCollision,
     updatePhysics,
   } = usePlayerPhysics(meshRef, keyboardState, touchState, playerState.isAlive && gamePhase === 'playing');
 

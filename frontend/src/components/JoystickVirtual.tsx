@@ -1,102 +1,148 @@
-import React, { useRef, useState, useEffect } from 'react';
-import useGameStore from '../store/useGameStore';
-import { Fwd, Hand } from 'lucide-react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { Hand } from 'lucide-react';
 
-export const JoystickVirtual: React.FC = () => {
-  const setJoystickState = useGameStore((state) => state.setJoystickState);
-  const setShootButtonState = useGameStore((state) => state.setShootButtonState);
+interface JoystickVirtualProps {
+  setJoystickState: (state: { x: number; y: number }) => void;
+  setShootButtonState: (isPressing: boolean) => void;
+}
 
+export const JoystickVirtual: React.FC<JoystickVirtualProps> = ({
+  setJoystickState,
+  setShootButtonState
+}) => {
   const joystickRef = useRef<HTMLDivElement>(null);
   const stickRef = useRef<HTMLDivElement>(null);
-  const startTouch = useRef<Touch | null>(null);
+  const activeJoystickTouchId = useRef<number | null>(null); // Track the identifier of the touch controlling the joystick
+  const joystickCenter = useRef({ x: 0, y: 0 }); // Center of the joystick base
+  const currentTouchCoords = useRef({ x: 0, y: 0 }); // Latest coordinates of the active touch
+
   const animationFrameId = useRef<number | null>(null);
   const [isPressingShoot, setIsPressingShoot] = useState(false);
 
   const JOYSTICK_RADIUS = 50;
 
-  const handleTouchStart = (e: TouchEvent) => {
-    e.preventDefault();
-    startTouch.current = e.changedTouches[0];
+  // Function to update the stick position and send state
+  const updateStickPosition = useCallback(() => {
+    if (!stickRef.current || activeJoystickTouchId.current === null) return;
+
+    const { x: touchX, y: touchY } = currentTouchCoords.current;
+    const { x: centerX, y: centerY } = joystickCenter.current;
+
+    let deltaX = touchX - centerX;
+    let deltaY = touchY - centerY;
+
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+    if (distance > JOYSTICK_RADIUS) {
+      deltaX = (deltaX / distance) * JOYSTICK_RADIUS;
+      deltaY = (deltaY / distance) * JOYSTICK_RADIUS;
+    }
+
+    stickRef.current.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+
+    // Normalize values to -1 to 1
+    const normalizedX = deltaX / JOYSTICK_RADIUS;
+    const normalizedY = -deltaY / JOYSTICK_RADIUS; // Y-axis inverted for game controls
+    setJoystickState({ x: normalizedX, y: normalizedY });
+
+    animationFrameId.current = requestAnimationFrame(updateStickPosition);
+  }, [setJoystickState]);
+
+  const handleTouchStart = useCallback((e: TouchEvent) => {
+    e.preventDefault(); // Prevent scrolling
+
+    if (!joystickRef.current || activeJoystickTouchId.current !== null) {
+      // Joystick already being controlled by another touch, or ref not ready
+      return;
+    }
+
+    const touch = e.changedTouches[0];
+    activeJoystickTouchId.current = touch.identifier;
+
+    const joystickRect = joystickRef.current.getBoundingClientRect();
+    joystickCenter.current = {
+      x: joystickRect.left + joystickRect.width / 2,
+      y: joystickRect.top + joystickRect.height / 2,
+    };
+
+    currentTouchCoords.current = { x: touch.clientX, y: touch.clientY };
 
     if (stickRef.current) {
       stickRef.current.style.transition = 'none';
     }
 
-    const updatePosition = () => {
-      if (!startTouch.current || !joystickRef.current || !stickRef.current) return;
+    animationFrameId.current = requestAnimationFrame(updateStickPosition);
+  }, [updateStickPosition]);
 
-      const currentTouch = Array.from(e.changedTouches).find(t => t.identifier === startTouch.current?.identifier);
-      if (!currentTouch) return;
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    e.preventDefault(); // Prevent scrolling
+    if (activeJoystickTouchId.current === null) return;
 
-      const joystickRect = joystickRef.current.getBoundingClientRect();
-      const centerX = joystickRect.left + joystickRect.width / 2;
-      const centerY = joystickRect.top + joystickRect.height / 2;
+    const activeTouch = Array.from(e.changedTouches).find(
+      (t) => t.identifier === activeJoystickTouchId.current
+    );
 
-      let deltaX = currentTouch.clientX - centerX;
-      let deltaY = currentTouch.clientY - centerY;
+    if (activeTouch) {
+      currentTouchCoords.current = { x: activeTouch.clientX, y: activeTouch.clientY };
+    }
+  }, []);
 
-      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+  const handleTouchEnd = useCallback((e: TouchEvent) => {
+    if (activeJoystickTouchId.current === null) return;
 
-      if (distance > JOYSTICK_RADIUS) {
-        deltaX = (deltaX / distance) * JOYSTICK_RADIUS;
-        deltaY = (deltaY / distance) * JOYSTICK_RADIUS;
+    const endedTouch = Array.from(e.changedTouches).find(
+      (t) => t.identifier === activeJoystickTouchId.current
+    );
+
+    if (endedTouch) {
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
       }
-
-      stickRef.current.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
-
-      // Normalize values to -1 to 1
-      const normalizedX = deltaX / JOYSTICK_RADIUS;
-      const normalizedY = -deltaY / JOYSTICK_RADIUS; // Y-axis inverted for game controls
-      setJoystickState({ x: normalizedX, y: normalizedY });
-
-      animationFrameId.current = requestAnimationFrame(updatePosition);
-    };
-
-    animationFrameId.current = requestAnimationFrame(updatePosition);
-  };
-
-  const handleTouchEnd = () => {
-    if (animationFrameId.current) {
-      cancelAnimationFrame(animationFrameId.current);
+      activeJoystickTouchId.current = null;
+      currentTouchCoords.current = { x: 0, y: 0 };
+      
+      if (stickRef.current) {
+        stickRef.current.style.transition = 'transform 0.1s ease-out';
+        stickRef.current.style.transform = 'translate(0px, 0px)';
+      }
+      setJoystickState({ x: 0, y: 0 });
     }
-    startTouch.current = null;
-    if (stickRef.current) {
-      stickRef.current.style.transition = 'transform 0.1s ease-out';
-      stickRef.current.style.transform = 'translate(0px, 0px)';
-    }
-    setJoystickState({ x: 0, y: 0 });
-  };
+  }, [setJoystickState]);
 
-  // Shoot button logic
-  const handleShootTouchStart = () => {
+  // Shoot button logic (remains similar, uses passed props)
+  const handleShootTouchStart = useCallback(() => {
     setIsPressingShoot(true);
     setShootButtonState(true);
-  };
+  }, [setShootButtonState]);
 
-  const handleShootTouchEnd = () => {
+  const handleShootTouchEnd = useCallback(() => {
     setIsPressingShoot(false);
     setShootButtonState(false);
-  };
+  }, [setShootButtonState]);
 
   useEffect(() => {
     const joystickElement = joystickRef.current;
     if (joystickElement) {
       joystickElement.addEventListener('touchstart', handleTouchStart as EventListener, { passive: false });
-      joystickElement.addEventListener('touchmove', handleTouchStart as EventListener, { passive: false }); // Continuously update on move
-      joystickElement.addEventListener('touchend', handleTouchEnd as EventListener);
-      joystickElement.addEventListener('touchcancel', handleTouchEnd as EventListener);
+      // Use document for touchmove/touchend so movement outside joystick area is still captured
+      document.addEventListener('touchmove', handleTouchMove as EventListener, { passive: false });
+      document.addEventListener('touchend', handleTouchEnd as EventListener);
+      document.addEventListener('touchcancel', handleTouchEnd as EventListener);
     }
 
     return () => {
       if (joystickElement) {
         joystickElement.removeEventListener('touchstart', handleTouchStart as EventListener);
-        joystickElement.removeEventListener('touchmove', handleTouchStart as EventListener);
-        joystickElement.removeEventListener('touchend', handleTouchEnd as EventListener);
-        joystickElement.removeEventListener('touchcancel', handleTouchEnd as EventListener);
+      }
+      document.removeEventListener('touchmove', handleTouchMove as EventListener);
+      document.removeEventListener('touchend', handleTouchEnd as EventListener);
+      document.removeEventListener('touchcancel', handleTouchEnd as EventListener);
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
       }
     };
-  }, []);
-
+  }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
+  
   return (
     <div className="absolute bottom-4 left-4 right-4 flex justify-between pointer-events-none z-50">
       {/* Joystick area */}

@@ -42,7 +42,6 @@ export const useGameLoop = (isActive: boolean) => {
         // For a battle royale, usually it's 'last man standing'. If player is only survivor, that's win.
         // If there were other players (NPCs), this implies player has won against all NPCs.
         // For simplicity, let's assume the game ends if player is the last one alive.
-        // If the game is designed for 'last man standing' among many, this logic would need adjustment.
         if (player.isAlive) {
             // endGame('win'); // Could add a 'win' state
         }

@@ -72,5 +72,5 @@ export interface GameSessionState {
   safeZoneRadius: number;
   safeZoneTimer: number; // Placeholder for future zone timer UI
   survivedSeconds: number;
-  collisionObjects: THREE.Object3[]; // Objects in scene for AI/bullet collision checks
+  collisionObjects: THREE.Object3D[]; // Objects in scene for AI/bullet collision checks
 }

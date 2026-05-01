@@ -7,11 +7,13 @@ vi.mock('@react-three/fiber', () => ({
   useThree: vi.fn(() => ({ camera: { position: { z: 5 } } })),
 }));
 
-vi.mock('@react-three/drei', () => ({
-  Environment: () => null,
-  Sky: () => null,
-  Stars: () => null,
-}));
+vi.mock('@react-three/drei', () => (
+  {
+    Environment: () => null,
+    Sky: () => null,
+    Stars: () => null,
+  }
+));
 
 vi.mock('../store/useGameStore', () => ({
   default: vi.fn(() => ({

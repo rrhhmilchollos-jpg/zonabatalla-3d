@@ -17,6 +17,7 @@ export const Bullet: React.FC<BulletProps> = ({ bullet }) => {
   const takeDamage = useGameStore((state) => state.takeDamage);
   const takePlayerDamage = useGameStore((state) => state.takePlayerDamage);
   const addElimination = useGameStore((state) => state.addElimination);
+  const collisionObjects = useGameStore((state) => state.collisionObjects); // Get collision objects
 
   // Initial position setup
   useEffect(() => {
@@ -28,19 +29,24 @@ export const Bullet: React.FC<BulletProps> = ({ bullet }) => {
   const allEnemies = useGameStore((state) => state.enemies);
   const player = useGameStore((state) => state.player);
 
+  // Raycaster for terrain collision
+  const bulletRaycaster = useRef(new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1, 0))); // Initialize with placeholder direction
+
   useFrame((state, delta) => {
     if (!meshRef.current) return;
 
     // Move bullet
     meshRef.current.position.addScaledVector(bullet.direction, delta);
+    const currentPos = meshRef.current.position;
 
     // Check for collisions (simplified)
-    const currentPos = meshRef.current.position;
 
     // Check collision with enemies if it's a player bullet
     if (bullet.source === 'player') {
       for (const enemy of allEnemies) {
-        if (enemy.isAlive && useCollision.sphereSphere(currentPos, BULLET_RADIUS, enemy.position, 0.4)) { // 0.4 is enemy radius
+        // Approximate enemy collision point: center of capsule
+        const enemyCollisionPoint = enemy.position.clone().add(new THREE.Vector3(0, 0.9, 0)); 
+        if (enemy.isAlive && useCollision.sphereSphere(currentPos, BULLET_RADIUS, enemyCollisionPoint, 0.5)) { // 0.5 is approx enemy half-height + radius
           takeDamage(enemy.id, bullet.damage);
           removeBullet(bullet.id);
           if (enemy.health - bullet.damage <= 0) {
@@ -53,15 +59,20 @@ export const Bullet: React.FC<BulletProps> = ({ bullet }) => {
 
     // Check collision with player if it's an enemy bullet
     if (bullet.source === 'enemy' && player.isAlive) {
-      if (useCollision.sphereSphere(currentPos, BULLET_RADIUS, player.position.clone().add(new THREE.Vector3(0, 0.9, 0)), 0.5)) { // 0.5 is player radius
+      // Approximate player collision point: center of capsule
+      const playerCollisionPoint = player.position.clone().add(new THREE.Vector3(0, 0.9, 0));
+      if (useCollision.sphereSphere(currentPos, BULLET_RADIUS, playerCollisionPoint, 0.5)) { // 0.5 is approx player half-height + radius
         takePlayerDamage(bullet.damage);
         removeBullet(bullet.id);
         return;
       }
     }
 
-    // Check collision with terrain (simplified: just below Y=0)
-    if (currentPos.y < 0) {
+    // Check collision with terrain using raycaster (more accurate)
+    bulletRaycaster.current.set(currentPos, bullet.direction.clone().normalize()); // Ray from current position in direction of travel
+    const terrainIntersects = bulletRaycaster.current.intersectObjects(collisionObjects, true);
+
+    if (terrainIntersects.length > 0 && terrainIntersects[0].distance < bullet.direction.length() * delta) { // If it will hit terrain this frame
       removeBullet(bullet.id);
       return;
     }

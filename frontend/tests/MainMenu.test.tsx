@@ -5,7 +5,7 @@ import { MainMenu } from '../src/components/MainMenu';
 describe('MainMenu', () => {
   it('renders main menu heading', () => {
     render(<MainMenu />);
-    const heading = screen.getByText(/ZonaBatalla 3D/i);
+    const heading = screen.getByText(/Vortex Royale/i);
     expect(heading).toBeInTheDocument();
   });
 });

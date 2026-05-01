@@ -1,6 +1,7 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useEffect } from 'react';
 import *as THREE from 'three';
 import { useTexture } from '@react-three/drei';
+import useGameStore from '../store/useGameStore'; // Import game store
 
 interface TerrainProps {
   size?: number;
@@ -14,10 +15,11 @@ export const Terrain: React.FC<TerrainProps> = ({
   heightScale = 30, // Maximum height variation
 }) => {
   const meshRef = useRef<THREE.Mesh>(null);
+  const setCollisionObjects = useGameStore((state) => state.setCollisionObjects); // Setter for collision objects
 
   const [grassTexture, rockTexture] = useTexture([
-    '/textures/grass_texture.jpg', // Placeholder, ensure you have these textures or replace
-    '/textures/rock_texture.jpg',
+    '/textures/grass_texture.jpg', // Replace with your own textures for a more detailed terrain.
+    '/textures/rock_texture.jpg',  // Example: download free textures and place them in /public/textures/
   ]);
 
   const geometry = useMemo(() => {
@@ -54,11 +56,21 @@ export const Terrain: React.FC<TerrainProps> = ({
     });
   }, [grassTexture, rockTexture]);
 
+  useEffect(() => {
+    if (meshRef.current) {
+      // Add terrain mesh to collision objects
+      setCollisionObjects((prev) => [...prev, meshRef.current!]);
+    }
+    return () => {
+      if (meshRef.current) {
+        // Remove terrain mesh on unmount
+        setCollisionObjects((prev) => prev.filter(obj => obj !== meshRef.current));
+      }
+    };
+  }, [setCollisionObjects]);
+
+
   return (
-    <mesh ref={meshRef} geometry={geometry} material={material} receiveShadow />
+    <mesh ref={meshRef} geometry={geometry} material={material} receiveShadow userData={{ objectType: 'terrain' }} />
   );
 };
-
-// Add placeholder textures in /public/textures/grass_texture.jpg and rock_texture.jpg
-// For example, download from a free texture site or use a colored plane for now.
-// e.g., https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/crate.gif for quick test

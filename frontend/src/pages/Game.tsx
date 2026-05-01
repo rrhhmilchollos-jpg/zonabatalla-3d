@@ -8,10 +8,22 @@ import { GameOver } from '../components/GameOver';
 import useGameStore from '../store/useGameStore';
 import { detectMobile } from '../utils/detectMobile';
 import { JoystickVirtual } from '../components/JoystickVirtual';
+import { useTouchControls } from '../hooks/useTouchControls';
 
 const Game: React.FC = () => {
   const gamePhase = useGameStore((state) => state.phase);
   const isMobile = useRef(detectMobile());
+
+  const {
+    x: touchX,
+    y: touchY,
+    jump: touchJump,
+    shoot: touchShoot,
+    run: touchRun,
+    setJoystickState,
+    setShootButtonState,
+  } = useTouchControls();
+  const currentTouchState = { x: touchX, y: touchY, jump: touchJump, shoot: touchShoot, run: touchRun };
 
   useEffect(() => {
     // Lock pointer for desktop gameplay when in 'playing' phase
@@ -53,7 +65,8 @@ const Game: React.FC = () => {
         camera={{ fov: 75, near: 0.1, far: 2000, position: [0, 10, 0] }}
         className="bg-background"
       >
-        <GameCanvas />
+        {/* Pass touchState to GameCanvas */}
+        <GameCanvas touchState={currentTouchState} /> 
       </Canvas>
 
       {/* 2D UI Layers */}
@@ -63,7 +76,13 @@ const Game: React.FC = () => {
       {gamePhase === 'paused' && <PauseScreen />}
       {gamePhase === 'gameover' && <GameOver />}
 
-      {isMobile.current && gamePhase === 'playing' && <JoystickVirtual />}
+      {isMobile.current && gamePhase === 'playing' && (
+        // Pass setters to JoystickVirtual
+        <JoystickVirtual 
+          setJoystickState={setJoystickState} 
+          setShootButtonState={setShootButtonState} 
+        />
+      )}
 
       {/* Global overlay for pointer lock feedback (optional, for desktop) */}
       {!isMobile.current && gamePhase === 'playing' && (

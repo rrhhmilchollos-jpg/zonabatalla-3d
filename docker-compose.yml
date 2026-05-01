@@ -1,0 +1,12 @@
+# docker-compose generado por Maris AI.
+# Arranca con: docker compose up --build
+#
+# Variables editables: define las que necesites antes de lanzar el
+# comando o crea un .env junto a este archivo.
+
+services:
+  app:
+    build: .
+    ports:
+      - "80:80"
+    restart: unless-stopped

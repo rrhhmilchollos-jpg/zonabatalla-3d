@@ -22,10 +22,18 @@ vi.mock('../store/useGameStore', () => ({
 }));
 vi.mock('../hooks/useGameLoop', () => ({ useGameLoop: vi.fn() }));
 vi.mock('../hooks/useKeyboardControls', () => ({
-  useKeyboardControls: vi.fn(() => ({ forward: false, backward: false, left: false, right: false, jump: false, shoot: false, run: false }))
+  useKeyboardControls: vi.fn(() => ({
+    forward: false,
+    backward: false,
+    left: false,
+    right: false,
+    jump: false,
+    shoot: false,
+    run: false
+  }))
 }));
 vi.mock('../hooks/useTouchControls', () => ({
-  useTouchControls: vi.fn(() => ({ x: 0, y: 0, jump: false, shoot: false, run: false }))
+  useTouchControls: vi.fn(() => ({ x: 0, y: 0, jump: false, shoot: false, run: false, setJoystickState: vi.fn(), setShootButtonState: vi.fn() }))
 }));
 vi.mock('../components/Scene', () => ({ Scene: () => <div data-testid="scene-mock" /> }));
 vi.mock('../components/Terrain', () => ({ Terrain: () => <div data-testid="terrain-mock" /> }));
@@ -38,7 +46,9 @@ vi.mock('../components/Crosshair', () => ({ Crosshair: () => <div data-testid="c
 
 describe('GameCanvas', () => {
   it('renders canvas container', () => {
-    render(<GameCanvas />);
+    // Mock touchState for GameCanvas prop
+    const mockTouchState = { x: 0, y: 0, jump: false, shoot: false, run: false };
+    render(<GameCanvas touchState={mockTouchState} />);
     const canvas = screen.getByTestId('canvas-mock');
     expect(canvas).toBeInTheDocument();
   });

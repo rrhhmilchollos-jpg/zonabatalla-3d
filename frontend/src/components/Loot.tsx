@@ -18,8 +18,8 @@ export const Loot: React.FC<LootProps> = ({ item }) => {
   const healPlayer = useGameStore((state) => state.healPlayer);
   const addArmor = useGameStore((state) => state.addArmor);
 
-  // Example of using useGLTF for a simple model. You'd need actual .glb files.
-  // For now, we'll use primitive meshes.
+  // Example of using useGLTF for a simple model. You would need actual .glb files
+  // and uncomment the line below, replacing the primitive mesh.
   // const { scene } = useGLTF('/models/crate.glb');
 
   useFrame(() => {

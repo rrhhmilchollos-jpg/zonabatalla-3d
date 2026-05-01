@@ -72,7 +72,7 @@ export const GameOver: React.FC = () => {
               className="w-full p-3 bg-muted border border-secondary/30 rounded-lg text-foreground placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary mb-4"
               placeholder="Introduce tu nombre..."
               value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}/
+              onChange={(e) => setPlayerName(e.target.value)}
               maxLength={20}
             />
             <button
